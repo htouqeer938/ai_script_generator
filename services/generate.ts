@@ -1,4 +1,4 @@
-import {GenerateScriptParams} from '@/types/generate';
+import {GenerateScriptRequest, GenerateScriptResponse} from '@/types/generate';
 import {buildPrompt} from '@/utils/generate';
 import OpenAI from 'openai';
 
@@ -10,22 +10,22 @@ export const generateScript = async ({
   topic,
   tone,
   length,
-}: GenerateScriptParams) => {
+  previousResponseId,
+}: GenerateScriptRequest): Promise<GenerateScriptResponse> => {
   const prompt = buildPrompt({topic, tone, length});
 
-  const completion = await openai.chat.completions.create({
+  const response = await openai.responses.create({
     model: 'gpt-4o-mini', // fast + cheap
-    messages: [
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-    temperature: 0.7,
+    instructions:
+      'You are a professional video script writer. Keep the conversation coherent across turns and refine prior ideas when the user follows up.',
+    input: prompt,
+    previous_response_id: previousResponseId || undefined,
   });
 
-  const script =
-    completion.choices[0]?.message?.content || 'No script generated.';
+  const script = response.output_text || 'No script generated.';
 
-  return {script};
+  return {
+    responseId: response.id,
+    script,
+  };
 };
